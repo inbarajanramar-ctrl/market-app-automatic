@@ -8,7 +8,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 st.set_page_config(page_title="Live Auto-Pivot Matrix", layout="centered")
 
 st.title("🚀 Live Auto-Pivot Matrix Engine")
-st.write("Fetches Data Directly from Web — No Typing Required")
+st.write("Calculates Present vs Previous Frameworks (Monthly, Weekly, Daily)")
 
 # --- 1. சிம்பல் செலக்டர் இன்புட் (Top Control Panel) ---
 ticker_options = {
@@ -31,7 +31,6 @@ def fetch_ohlc_from_web(ticker_symbol):
     df_daily = ticker.history(period="5d", interval="1d")
     df_weekly = ticker.history(period="1mo", interval="1wk")
     df_monthly = ticker.history(period="6mo", interval="1mo")
-    df_yearly = ticker.history(period="5y", interval="1y")
     
     # தற்போதைய லைவ் விலை (LTP)
     try:
@@ -55,17 +54,12 @@ def fetch_ohlc_from_web(ticker_symbol):
     else:
         ohlc_data["Present Weekly"] = ohlc_data["Previous Weekly"] = {"H": 0, "L": 0, "C": 0}
 
-    # C. Monthly Data Processing
-    if not df_monthly.empty:
+    # C. Monthly Data Processing (நீங்கள் கேட்டபடி முந்தைய மாத லெவலும் சேர்க்கப்பட்டுள்ளது)
+    if len(df_monthly) >= 2:
         ohlc_data["Present Monthly"] = {"H": df_monthly['High'].iloc[-1], "L": df_monthly['Low'].iloc[-1], "C": df_monthly['Close'].iloc[-1]}
+        ohlc_data["Previous Monthly"] = {"H": df_monthly['High'].iloc[-2], "L": df_monthly['Low'].iloc[-2], "C": df_monthly['Close'].iloc[-2]}
     else:
-        ohlc_data["Present Monthly"] = {"H": 0, "L": 0, "C": 0}
-
-    # D. Yearly Data Processing
-    if not df_yearly.empty:
-        ohlc_data["Yearly"] = {"H": df_yearly['High'].iloc[-1], "L": df_yearly['Low'].iloc[-1], "C": df_yearly['Close'].iloc[-1]}
-    else:
-        ohlc_data["Yearly"] = {"H": 0, "L": 0, "C": 0}
+        ohlc_data["Present Monthly"] = ohlc_data["Previous Monthly"] = {"H": 0, "L": 0, "C": 0}
         
     return ohlc_data, round(ltp, 2)
 
@@ -90,8 +84,8 @@ with st.spinner("Fetching live data from website..."):
         st.error("Error connecting to website. Please check the Ticker name.")
         st.stop()
 
-# லெவல்களை கணக்கிட்டு அடுக்குதல்
-view_order = ["Yearly", "Present Monthly", "Previous Weekly", "Present Weekly", "Previous Daily", "Present Daily"]
+# லெவல்களை கணக்கிட்டு அடுக்குதல் (Yearly தூக்கப்பட்டு, Previous Monthly சேர்க்கப்பட்டுள்ளது)
+view_order = ["Previous Monthly", "Present Monthly", "Previous Weekly", "Present Weekly", "Previous Daily", "Present Daily"]
 calculated_rows = []
 for tf in view_order:
     vals = web_ohlc.get(tf, {"H": 0, "L": 0, "C": 0})
@@ -116,9 +110,11 @@ def detect_pivot_relationship(prev_tc, prev_bc, curr_tc, curr_bc):
 row_map = df.set_index("Level")
 d_rel_title, d_rel_desc = detect_pivot_relationship(row_map.loc["Previous Daily", "TC"], row_map.loc["Previous Daily", "BC"], row_map.loc["Present Daily", "TC"], row_map.loc["Present Daily", "BC"])
 w_rel_title, w_rel_desc = detect_pivot_relationship(row_map.loc["Previous Weekly", "TC"], row_map.loc["Previous Weekly", "BC"], row_map.loc["Present Weekly", "TC"], row_map.loc["Present Weekly", "BC"])
+m_rel_title, m_rel_desc = detect_pivot_relationship(row_map.loc["Previous Monthly", "TC"], row_map.loc["Previous Monthly", "BC"], row_map.loc["Present Monthly", "TC"], row_map.loc["Present Monthly", "BC"])
 
 st.info(f"**📅 Intraday View (Prev Daily ➔ Pres Daily):** {d_rel_title}\n\n💡 *{d_rel_desc}*")
 st.success(f"**⏳ Swing View (Prev Weekly ➔ Pres Weekly):** {w_rel_title}\n\n💡 *{w_rel_desc}*")
+st.warning(f"**🦅 Position View (Prev Monthly ➔ Pres Monthly):** {m_rel_title}\n\n💡 *{m_rel_desc}*")
 
 # --- 5. வியூ பெர்ஸ்பெக்டிவ் பட்டன்கள் ---
 st.subheader("🎯 View Perspective")
@@ -173,7 +169,7 @@ def plot_mobile_engine(plot_df, ltp):
 
 st.pyplot(plot_mobile_engine(sub_df, market_close_price))
 
-# --- 7. ஆக்டிவ் டேட்டா டேபிள் மற்றும் PDF டவுன்லோடு ---
+# --- 7. ஆக்டிவ் டேட்டா டேபிள் மற்றும் PDF டவுன்লোடு ---
 st.subheader("📋 Active Data Table")
 st.dataframe(df.set_index("Level"), use_container_width=True)
 
