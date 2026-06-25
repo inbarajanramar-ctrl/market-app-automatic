@@ -13,6 +13,7 @@ st.write("Using Completed Previous Frames for 100% Accurate Relationship Analysi
 # --- 1. சிம்பல் செலக்டர் இன்புட் ---
 ticker_options = {
     "Nifty 50": "^NSEI",
+    "Sensex": "^BSESN",
     "Bank Nifty": "^NSEBANK",
     "Reliance": "RELIANCE.NS",
     "TCS": "TCS.NS",
