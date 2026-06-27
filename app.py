@@ -7,14 +7,12 @@ from matplotlib.backends.backend_pdf import PdfPages
 # மொபைலுக்கு ஏற்றவாறு பக்கத்தை அமைத்தல்
 st.set_page_config(page_title="Advanced Multi-Pivot Matrix", layout="centered")
 
-st.title("📊 Advanced Multi-Pivot & Breakout Screener")
-st.write("Automatically Screens ALL Nifty 50 & Sensex Stocks for Narrow CPR Breakouts")
+st.title("📊 3-Week & 3-Month Real-Time Matrix Engine")
+st.write("Live Data Screener & Structure Matrix — No Waiting for Weekend/Month-End")
 
-# --- Nifty & Sensex பங்குகளின் முழுமையான பட்டியல் (60+ Stocks & Indices) ---
+# --- Nifty & Sensex பங்குகளின் முழுமையான பட்டியல் ---
 NIFTY_AND_SENSEX_STOCKS = {
-    # Indices
     "Nifty 50 Index": "^NSEI", "Bank Nifty Index": "^NSEBANK", "Sensex Index": "^BSESN",
-    # Core Stocks
     "Reliance Industries": "RELIANCE.NS", "TCS": "TCS.NS", "HDFC Bank": "HDFCBANK.NS", 
     "ICICI Bank": "ICICIBANK.NS", "Infosys": "INFY.NS", "SBI": "SBIN.NS", 
     "Bharti Airtel": "BHARTIARTL.NS", "L&T": "LT.NS", "ITC": "ITC.NS", 
@@ -30,10 +28,7 @@ NIFTY_AND_SENSEX_STOCKS = {
     "LTIMindtree": "LTIM.NS", "Nestle India": "NESTLEIND.NS", "ONGC": "ONGC.NS",
     "Apollo Hospitals": "APOLLOHOSP.NS", "Britannia": "BRITANNIA.NS", "IndusInd Bank": "INDUSINDBK.NS",
     "Shriram Finance": "SHRIRAMFIN.NS", "Trent": "TRENT.NS", "UltraTech Cement": "ULTRACEMCO.NS",
-    "Wipro": "WIPRO.NS", "Tata Consumer Products": "TATACONSUM.NS", "Jio Financial Services": "JIOFIN.NS",
-    # Additional Sensex Heavyweights
-    "NTPC Limited": "NTPC.BO", "Tata Steel Ltd": "TATASTEEL.BO", "Tech Mahindra": "TECHM.NS",
-    "IndusInd Bank Ltd": "INDUSINDBK.BO", "Bajaj Finance Ltd": "BAJFINANCE.BO", "Wipro Ltd": "WIPRO.BO"
+    "Wipro": "WIPRO.NS", "Tata Consumer Products": "TATACONSUM.NS", "Jio Financial Services": "JIOFIN.NS"
 }
 
 # --- 1. ஆட்டோமேட்டிக் லெவல் கால்குலேட்டர் ஃபங்ஷன் ---
@@ -48,12 +43,12 @@ def calculate_pivot_levels(high, low, close):
     l4 = close - (range_val * 1.1 / 2.0)
     return {"H4": round(h4,2), "H3": round(h3,2), "L3": round(l3,2), "L4": round(l4,2), "TC": round(tc,2), "CP": round(cp,2), "BC": round(bc,2)}
 
-# --- 2. வெப்சைட்டில் இருந்து தரவுகளை எடுக்கும் இன்ஜின் ---
-@st.cache_data(ttl=300)
+# --- 2. வெப்சைட்டில் இருந்து 3 வார மற்றும் 3 மாத தரவுகளை எடுக்கும் புதிய இன்ஜின் ---
+@st.cache_data(ttl=120)
 def fetch_perfect_ohlc_matrix(ticker_symbol):
     ticker = yf.Ticker(ticker_symbol)
-    df = ticker.history(period="1y", interval="1d")
-    if df.empty or len(df) < 10:
+    df = ticker.history(period="2y", interval="1d")
+    if df.empty or len(df) < 60:
         return None, 0.0
     try:
         ltp = ticker.basic_info['lastPrice']
@@ -61,16 +56,22 @@ def fetch_perfect_ohlc_matrix(ticker_symbol):
         ltp = df['Close'].iloc[-1]
     
     matrix_data = {}
+    
+    # A. DAILY
     matrix_data["Present Daily"] = {"H": df['High'].iloc[-1], "L": df['Low'].iloc[-1], "C": df['Close'].iloc[-1]}
     matrix_data["Previous Daily"] = {"H": df['High'].iloc[-2], "L": df['Low'].iloc[-2], "C": df['Close'].iloc[-2]}
     
+    # B. WEEKLY (நடப்பு வாரம் உட்பட மொத்தம் 3 வாரங்கள்)
     df_weekly = df.resample('W-SUN').agg({'High': 'max', 'Low': 'min', 'Close': 'last'}).dropna()
     if len(df_weekly) >= 3:
+        matrix_data["Present Weekly"] = {"H": df_weekly['High'].iloc[-1], "L": df_weekly['Low'].iloc[-1], "C": df_weekly['Close'].iloc[-1]}
         matrix_data["Previous Week"] = {"H": df_weekly['High'].iloc[-2], "L": df_weekly['Low'].iloc[-2], "C": df_weekly['Close'].iloc[-2]}
         matrix_data["2 Weeks Ago"] = {"H": df_weekly['High'].iloc[-3], "L": df_weekly['Low'].iloc[-3], "C": df_weekly['Close'].iloc[-3]}
         
+    # C. MONTHLY (நடப்பு மாதம் உட்பட மொத்தம் 3 மாதங்கள்)
     df_monthly = df.resample('ME').agg({'High': 'max', 'Low': 'min', 'Close': 'last'}).dropna()
     if len(df_monthly) >= 3:
+        matrix_data["Present Monthly"] = {"H": df_monthly['High'].iloc[-1], "L": df_monthly['Low'].iloc[-1], "C": df_monthly['Close'].iloc[-1]}
         matrix_data["Previous Month"] = {"H": df_monthly['High'].iloc[-2], "L": df_monthly['Low'].iloc[-2], "C": df_monthly['Close'].iloc[-2]}
         matrix_data["2 Months Ago"] = {"H": df_monthly['High'].iloc[-3], "L": df_monthly['Low'].iloc[-3], "C": df_monthly['Close'].iloc[-3]}
         
@@ -97,7 +98,7 @@ if st.button("🔍 Scan All Stocks for Breakout"):
         st.success(f"Shortlisted {len(narrow_list)} Stocks with Narrow CPR for Tomorrow's Breakout!")
         st.dataframe(pd.DataFrame(narrow_list).sort_values(by="CPR Width %"), use_container_width=True)
     else:
-        st.warning("No Narrow CPR stocks found today. All stocks are in rangebound structure.")
+        st.warning("No Narrow CPR stocks found today.")
 
 st.markdown("---")
 
@@ -113,8 +114,8 @@ if not web_data:
     st.error("Error loading specific ticker data.")
     st.stop()
 
-# லெவல்களை அடுக்குதல்
-view_order = ["2 Months Ago", "Previous Month", "2 Weeks Ago", "Previous Week", "Previous Daily", "Present Daily"]
+# லெவல்களை அடுக்குதல் (3 வாரங்கள் மற்றும் 3 மாதங்கள் முழுமையாக அடுக்கப்பட்டுள்ளது)
+view_order = ["2 Months Ago", "Previous Month", "Present Monthly", "2 Weeks Ago", "Previous Week", "Present Weekly", "Previous Daily", "Present Daily"]
 calculated_rows = []
 for tf in view_order:
     vals = web_data.get(tf, {"H": 0, "L": 0, "C": 0})
@@ -125,29 +126,47 @@ for tf in view_order:
 df = pd.DataFrame(calculated_rows)[["Level", "H4", "H3", "L3", "L4", "TC", "CP", "BC"]]
 row_map = df.set_index("Level")
 
-# CPR Width Analysis பாக்ஸ்
-width = abs(row_map.loc["Present Daily", "TC"] - row_map.loc["Present Daily", "BC"])
-width_pct = (width / market_close_price) * 100
-if width_pct <= 0.15:
-    st.error(f"⚡ **NARROW CPR DETECTED ({width_pct:.2f}%)** — Ready for high volume breakout play today!")
-else:
-    st.info(f"📐 **Average/Wide CPR Structure ({width_pct:.2f}%)** — Best suited for range bound plays.")
+# --- 5. 3-வாரம் மற்றும் 3-மாத விரிவான டிரெண்ட் அனாலிசிஸ் ---
+def detect_pivot_relationship(prev_tc, prev_bc, curr_tc, curr_bc):
+    prev_high, prev_low = max(prev_tc, prev_bc), min(prev_tc, prev_bc)
+    curr_high, curr_low = max(curr_tc, curr_bc), min(curr_bc, curr_tc)
+    if curr_low > prev_high: return "🟢 Higher Value (Strongly Bullish)"
+    elif curr_high < prev_low: return "🔴 Lower Value (Strongly Bearish)"
+    elif curr_high < prev_high and curr_low > prev_low: return "🟣 Inside Value (Breakout Imminent)"
+    elif curr_high > prev_high and curr_low < prev_low: return "🔵 Outside Value (Sideways)"
+    elif curr_high > prev_high and curr_low >= prev_low: return "🟡 Overlapping Higher (Bullish)"
+    elif curr_low < prev_low and curr_high <= prev_high: return "🟠 Overlapping Lower (Bearish)"
+    else: return "⚪ Unchanged"
 
-# --- 5. 4 விதமான சார்ட் வியூ பட்டன்கள் ---
-selected_tab = st.radio("Select View Range:", ["Full Structure View", "Two Month Relationship", "Two Week Relationship", "Two Day & Weekly to Daily View"], horizontal=True)
+# 3 Months Relationship Analysis (2 Months Ago -> Prev Month -> Pres Monthly)
+m_rel1 = detect_pivot_relationship(row_map.loc["2 Months Ago", "TC"], row_map.loc["2 Months Ago", "BC"], row_map.loc["Previous Month", "TC"], row_map.loc["Previous Month", "BC"])
+m_rel2 = detect_pivot_relationship(row_map.loc["Previous Month", "TC"], row_map.loc["Previous Month", "BC"], row_map.loc["Present Monthly", "TC"], row_map.loc["Present Monthly", "BC"])
 
-if selected_tab == "Full Structure View":
+# 3 Weeks Relationship Analysis (2 Weeks Ago -> Prev Week -> Pres Weekly)
+w_rel1 = detect_pivot_relationship(row_map.loc["2 Weeks Ago", "TC"], row_map.loc["2 Weeks Ago", "BC"], row_map.loc["Previous Week", "TC"], row_map.loc["Previous Week", "BC"])
+w_rel2 = detect_pivot_relationship(row_map.loc["Previous Week", "TC"], row_map.loc["Previous Week", "BC"], row_map.loc["Present Weekly", "TC"], row_map.loc["Present Weekly", "BC"])
+
+st.subheader("🔍 3-Tier Multi-Timeframe Analysis")
+st.warning(f"**🦅 3 Months Matrix Trend:** {m_rel1} ➔ Then {m_rel2}")
+st.success(f"**⏳ 3 Weeks Matrix Trend:** {w_rel1} ➔ Then {w_rel2}")
+st.info(f"**📅 Day-on-Day Trend:** {detect_pivot_relationship(row_map.loc["Previous Daily", "TC"], row_map.loc["Previous Daily", "BC"], row_map.loc["Present Daily", "TC"], row_map.loc["Present Daily", "BC"])}")
+
+# --- 6. 4 விதமான மாஸ் சார்ட் வியூ பட்டன்கள் ---
+st.subheader("🎯 View Perspective")
+selected_tab = st.radio("Select View Range:", ["Full 8-Level View", "3 Month Structural View", "3 Week Structural View", "Tactical Weekly to Daily View"], horizontal=True)
+
+if selected_tab == "Full 8-Level View":
     sub_df = df.copy()
-elif selected_tab == "Two Month Relationship":
-    sub_df = df[df["Level"].isin(["2 Months Ago", "Previous Month"])].reset_index(drop=True)
-elif selected_tab == "Two Week Relationship":
-    sub_df = df[df["Level"].isin(["2 Weeks Ago", "Previous Week"])].reset_index(drop=True)
+elif selected_tab == "3 Month Structural View":
+    sub_df = df[df["Level"].isin(["2 Months Ago", "Previous Month", "Present Monthly"])].reset_index(drop=True)
+elif selected_tab == "3 Week Structural View":
+    sub_df = df[df["Level"].isin(["2 Weeks Ago", "Previous Week", "Present Weekly"])].reset_index(drop=True)
 else:
-    sub_df = df[df["Level"].isin(["Previous Week", "Previous Daily", "Present Daily"])].reset_index(drop=True)
+    sub_df = df[df["Level"].isin(["Present Weekly", "Previous Daily", "Present Daily"])].reset_index(drop=True)
 
-# --- 6. Matplotlib சார்ட் என்ஜின் ---
+# --- 7. Matplotlib சார்ட் என்ஜின் ---
 def plot_mobile_engine(plot_df, ltp):
-    fig, ax = plt.subplots(figsize=(10, 6.5))
+    fig, ax = plt.subplots(figsize=(11, 6.5))
     x_positions = range(len(plot_df))
     all_prices = [ltp]
     bar_width = 0.4
@@ -158,19 +177,19 @@ def plot_mobile_engine(plot_df, ltp):
         
         # Camarilla Lines
         ax.hlines(y=row["H4"], xmin=x - bar_width, xmax=x + bar_width, colors="blue", linewidth=2.5)
-        ax.text(x, row["H4"] + (ltp*0.0005), f'{row["H4"]:.1f}', ha="center", va="bottom", fontsize=8, color="blue", weight="bold")
+        ax.text(x, row["H4"] + (ltp*0.0005), f'{row["H4"]:.1f}', ha="center", va="bottom", fontsize=7.5, color="blue", weight="bold")
         ax.hlines(y=row["H3"], xmin=x - bar_width, xmax=x + bar_width, colors="orange", linewidth=2.5)
-        ax.text(x, row["H3"] + (ltp*0.0005), f'{row["H3"]:.1f}', ha="center", va="bottom", fontsize=8, color="red", weight="bold")
+        ax.text(x, row["H3"] + (ltp*0.0005), f'{row["H3"]:.1f}', ha="center", va="bottom", fontsize=7.5, color="red", weight="bold")
         ax.hlines(y=row["L3"], xmin=x - bar_width, xmax=x + bar_width, colors="orange", linestyles="--", linewidth=2)
-        ax.text(x, row["L3"] - (ltp*0.0005), f'{row["L3"]:.1f}', ha="center", va="top", fontsize=8, color="red", weight="bold")
+        ax.text(x, row["L3"] - (ltp*0.0005), f'{row["L3"]:.1f}', ha="center", va="top", fontsize=7.5, color="red", weight="bold")
         ax.hlines(y=row["L4"], xmin=x - bar_width, xmax=x + bar_width, colors="blue", linestyles="--", linewidth=2)
-        ax.text(x, row["L4"] - (ltp*0.0005), f'{row["L4"]:.1f}', ha="center", va="top", fontsize=8, color="blue", weight="bold")
+        ax.text(x, row["L4"] - (ltp*0.0005), f'{row["L4"]:.1f}', ha="center", va="top", fontsize=7.5, color="blue", weight="bold")
         
         # CPR Lines
         ax.hlines(y=row["TC"], xmin=x - bar_width, xmax=x + bar_width, colors="purple", linestyles=":", linewidth=1.5)
         ax.hlines(y=row["CP"], xmin=x - bar_width, xmax=x + bar_width, colors="purple", linestyles="-.", linewidth=2)
         ax.hlines(y=row["BC"], xmin=x - bar_width, xmax=x + bar_width, colors="purple", linestyles=":", linewidth=1.5)
-        ax.text(x - bar_width, row["CP"], f' CP:{row["CP"]:.1f}', ha="left", va="center", fontsize=7.5, color="purple")
+        ax.text(x - bar_width, row["CP"], f' CP:{row["CP"]:.1f}', ha="left", va="center", fontsize=7, color="purple")
         
         # LTP Line
         ax.hlines(y=ltp, xmin=x - bar_width, xmax=x + bar_width, colors="crimson", linestyles="-", linewidth=1.2, alpha=0.7)
@@ -178,23 +197,8 @@ def plot_mobile_engine(plot_df, ltp):
         if idx == len(plot_df) - 1: 
             ax.text(x + bar_width + 0.02, ltp, f'LTP:{ltp}', va="center", ha="left", color="crimson", weight="bold", fontsize=8.5)
 
-    # Shading லாஜிக்
-    levels_list = plot_df["Level"].values
-    if "Previous Week" in levels_list and "Present Daily" in levels_list:
-        try:
-            w_row = plot_df[plot_df["Level"] == "Previous Week"].iloc[0]
-            d_row = plot_df[plot_df["Level"] == "Present Daily"].iloc[0]
-            all_keys = ["H4", "H3", "L3", "L4", "TC", "CP", "BC"]
-            for wk in all_keys:
-                for dk in all_keys:
-                    if abs(w_row[wk] - d_row[dk]) / w_row[wk] <= 0.0015:
-                        y_min, y_max = min(w_row[wk], d_row[dk]), max(w_row[wk], d_row[dk])
-                        ax.axhspan(y_min - (ltp*0.0002), y_max + (ltp*0.0002), xmin=0.1, xmax=0.9, color="#ff00ff", alpha=0.1)
-        except:
-            pass
-
     ax.set_xticks(x_positions)
-    ax.set_xticklabels(plot_df["Level"], fontsize=9.5, weight="bold")
+    ax.set_xticklabels(plot_df["Level"], fontsize=8.5, weight="bold", rotation=15)
     ax.grid(True, linestyle=":", alpha=0.4)
     ax.set_xlim(-0.5, len(plot_df) - 0.5)
     
@@ -206,18 +210,18 @@ def plot_mobile_engine(plot_df, ltp):
 
 st.pyplot(plot_mobile_engine(sub_df, market_close_price))
 
-# --- 7. ஆக்டிவ் டேட்டா டேபிள் மற்றும் PDF டவுன்லோடு ---
+# --- 8. ஆக்டிவ் டேட்டா டேபிள் மற்றும் PDF டவுன்லோடு ---
 st.subheader("📋 Active Data Table")
 st.dataframe(df.set_index("Level"), use_container_width=True)
 
 st.subheader("📥 Download Analysis Report")
-pdf_path = "Advanced_Multi_Pivot_Report.pdf"
+pdf_path = "Advanced_3_Tier_Pivot_Report.pdf"
 with PdfPages(pdf_path) as pdf:
     for view_name, plot_data in [
-        ("Full View Structure", df), 
-        ("Two Month Relationship", df[df["Level"].isin(["2 Months Ago", "Previous Month"])]),
-        ("Two Week Relationship", df[df["Level"].isin(["2 Weeks Ago", "Previous Week"])]),
-        ("Two Day and Weekly to Daily View", df[df["Level"].isin(["Previous Week", "Previous Daily", "Present Daily"])])
+        ("Full 8-Level Structure View", df), 
+        ("3 Month Structural View", df[df["Level"].isin(["2 Months Ago", "Previous Month", "Present Monthly"])]),
+        ("3 Week Structural View", df[df["Level"].isin(["2 Weeks Ago", "Previous Week", "Present Weekly"])]),
+        ("Tactical Weekly to Daily View", df[df["Level"].isin(["Present Weekly", "Previous Daily", "Present Daily"])])
     ]:
         fig_pdf = plot_mobile_engine(plot_data.reset_index(drop=True), market_close_price)
         plt.title(f"Market Analysis - {view_name}", fontsize=11, weight="bold", pad=12)
@@ -225,4 +229,4 @@ with PdfPages(pdf_path) as pdf:
         plt.close()
 
 with open(pdf_path, "rb") as pdf_file:
-    st.download_button(label="Download Full PDF Matrix Report", data=pdf_file, file_name="Advanced_Multi_Pivot_Report.pdf", mime="application/pdf")
+    st.download_button(label="Download Full 3-Tier PDF Report", data=pdf_file, file_name="Advanced_3_Tier_Pivot_Report.pdf", mime="application/pdf")
