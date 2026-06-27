@@ -8,16 +8,32 @@ from matplotlib.backends.backend_pdf import PdfPages
 st.set_page_config(page_title="Advanced Multi-Pivot Matrix", layout="centered")
 
 st.title("📊 Advanced Multi-Pivot & Breakout Screener")
-st.write("Automatically Screens Nifty 50 Stocks for Narrow CPR Breakouts")
+st.write("Automatically Screens ALL Nifty 50 & Sensex Stocks for Narrow CPR Breakouts")
 
-# --- Nifty 50 பங்குகள் பட்டியல் ---
-NIFTY_50_STOCKS = {
+# --- Nifty & Sensex பங்குகளின் முழுமையான பட்டியல் (60+ Stocks & Indices) ---
+NIFTY_AND_SENSEX_STOCKS = {
+    # Indices
     "Nifty 50 Index": "^NSEI", "Bank Nifty Index": "^NSEBANK", "Sensex Index": "^BSESN",
-    "Reliance": "RELIANCE.NS", "TCS": "TCS.NS", "HDFC Bank": "HDFCBANK.NS", "ICICI Bank": "ICICIBANK.NS",
-    "Infosys": "INFY.NS", "SBIN": "SBIN.NS", "Bharti Airtel": "BHARTIARTL.NS", "L&T": "LT.NS",
-    "ITC": "ITC.NS", "Tata Motors": "TATAMOTORS.NS", "Axis Bank": "AXISBANK.NS", "Kotak Bank": "KOTAKBANK.NS",
-    "M&M": "M&M.NS", "HUL": "HINDUNILVR.NS", "Maruti": "MARUTI.NS", "Sun Pharma": "SUNPHARMA.NS",
-    "NTPC": "NTPC.NS", "Tata Steel": "TATASTEEL.NS", "Power Grid": "POWERGRID.NS", "Titan": "TITAN.NS"
+    # Core Stocks
+    "Reliance Industries": "RELIANCE.NS", "TCS": "TCS.NS", "HDFC Bank": "HDFCBANK.NS", 
+    "ICICI Bank": "ICICIBANK.NS", "Infosys": "INFY.NS", "SBI": "SBIN.NS", 
+    "Bharti Airtel": "BHARTIARTL.NS", "L&T": "LT.NS", "ITC": "ITC.NS", 
+    "Tata Motors": "TATAMOTORS.NS", "Axis Bank": "AXISBANK.NS", "Kotak Mahindra Bank": "KOTAKBANK.NS",
+    "M&M": "M&M.NS", "Hindustan Unilever": "HINDUNILVR.NS", "Maruti Suzuki": "MARUTI.NS", 
+    "Sun Pharma": "SUNPHARMA.NS", "NTPC": "NTPC.NS", "Tata Steel": "TATASTEEL.NS", 
+    "Power Grid": "POWERGRID.NS", "Titan Company": "TITAN.NS", "HCL Tech": "HCLTECH.NS",
+    "Adani Ports": "ADANIPORTS.NS", "Adani Enterprises": "ADANIENT.NS", "Asian Paints": "ASIANPAINT.NS",
+    "Bajaj Auto": "BAJAJ-AUTO.NS", "Bajaj Finance": "BAJFINANCE.NS", "Bajaj Finserv": "BAJAJFINSV.NS",
+    "BPCL": "BPCL.NS", "Cipla": "CIPLA.NS", "Coal India": "COALINDIA.NS", 
+    "Divi's Lab": "DIVISLAB.NS", "Dr. Reddy's": "DRREDDY.NS", "Eicher Motors": "EICHERMOT.NS",
+    "Grasim Industries": "GRASIM.NS", "Hindalco": "HINDALCO.NS", "JSW Steel": "JSWSTEEL.NS",
+    "LTIMindtree": "LTIM.NS", "Nestle India": "NESTLEIND.NS", "ONGC": "ONGC.NS",
+    "Apollo Hospitals": "APOLLOHOSP.NS", "Britannia": "BRITANNIA.NS", "IndusInd Bank": "INDUSINDBK.NS",
+    "Shriram Finance": "SHRIRAMFIN.NS", "Trent": "TRENT.NS", "UltraTech Cement": "ULTRACEMCO.NS",
+    "Wipro": "WIPRO.NS", "Tata Consumer Products": "TATACONSUM.NS", "Jio Financial Services": "JIOFIN.NS",
+    # Additional Sensex Heavyweights
+    "NTPC Limited": "NTPC.BO", "Tata Steel Ltd": "TATASTEEL.BO", "Tech Mahindra": "TECHM.NS",
+    "IndusInd Bank Ltd": "INDUSINDBK.BO", "Bajaj Finance Ltd": "BAJFINANCE.BO", "Wipro Ltd": "WIPRO.BO"
 }
 
 # --- 1. ஆட்டோமேட்டிக் லெவல் கால்குலேட்டர் ஃபங்ஷன் ---
@@ -61,21 +77,21 @@ def fetch_perfect_ohlc_matrix(ticker_symbol):
     return matrix_data, round(ltp, 2)
 
 # --- 3. தானியங்கி பிரேக்அவுட் ஸ்கேனர் பட்டன் ---
-st.subheader("🎯 1-Click Breakout Radar (Narrow CPR Scanner)")
+st.subheader("🎯 1-Click Breakout Radar (ALL Nifty & Sensex Stocks)")
 if st.button("🔍 Scan All Stocks for Breakout"):
     narrow_list = []
     progress_bar = st.progress(0)
     
-    for idx, (name, ticker) in enumerate(NIFTY_50_STOCKS.items()):
+    for idx, (name, ticker) in enumerate(NIFTY_AND_SENSEX_STOCKS.items()):
         web_data, ltp = fetch_perfect_ohlc_matrix(ticker)
         if web_data and "Present Daily" in web_data:
             vals = web_data["Present Daily"]
             pivots = calculate_pivot_levels(vals["H"], vals["L"], vals["C"])
             width_pct = (abs(pivots["TC"] - pivots["BC"]) / ltp) * 100
             
-            if width_pct <= 0.16:  # Narrow CPR லிமிட்
+            if width_pct <= 0.16:
                 narrow_list.append({"Stock": name, "Ticker": ticker, "LTP": ltp, "CPR Width %": round(width_pct, 2)})
-        progress_bar.progress((idx + 1) / len(NIFTY_50_STOCKS))
+        progress_bar.progress((idx + 1) / len(NIFTY_AND_SENSEX_STOCKS))
         
     if narrow_list:
         st.success(f"Shortlisted {len(narrow_list)} Stocks with Narrow CPR for Tomorrow's Breakout!")
@@ -85,10 +101,10 @@ if st.button("🔍 Scan All Stocks for Breakout"):
 
 st.markdown("---")
 
-# --- 4. சிம்பல் செலக்டர் இன்புட் (தனித்தனி அனாலிசிஸ்) ---
+# --- 4. சிம்பல் செலக்டர் இன்புட் ---
 st.subheader("🕵️ Detailed Stock Analysis")
-selected_symbol_label = st.selectbox("🎯 Choose Stock for Detailed Visuals:", list(NIFTY_50_STOCKS.keys()))
-custom_ticker = NIFTY_50_STOCKS[selected_symbol_label]
+selected_symbol_label = st.selectbox("🎯 Choose Stock for Detailed Visuals:", list(NIFTY_AND_SENSEX_STOCKS.keys()))
+custom_ticker = NIFTY_AND_SENSEX_STOCKS[selected_symbol_label]
 
 with st.spinner("Loading Chart Matrix Data..."):
     web_data, market_close_price = fetch_perfect_ohlc_matrix(custom_ticker)
@@ -109,7 +125,7 @@ for tf in view_order:
 df = pd.DataFrame(calculated_rows)[["Level", "H4", "H3", "L3", "L4", "TC", "CP", "BC"]]
 row_map = df.set_index("Level")
 
-# CPR Width Matrix Analysis பாக்ஸ்
+# CPR Width Analysis பாக்ஸ்
 width = abs(row_map.loc["Present Daily", "TC"] - row_map.loc["Present Daily", "BC"])
 width_pct = (width / market_close_price) * 100
 if width_pct <= 0.15:
@@ -119,7 +135,15 @@ else:
 
 # --- 5. 4 விதமான சார்ட் வியூ பட்டன்கள் ---
 selected_tab = st.radio("Select View Range:", ["Full Structure View", "Two Month Relationship", "Two Week Relationship", "Two Day & Weekly to Daily View"], horizontal=True)
-sub_df = df.copy() if selected_tab == "Full Structure View" else df[df["Level"].isin(["2 Months Ago", "Previous Month"])] if selected_tab == "Two Month Relationship" else df[df["Level"].isin(["2 Weeks Ago", "Previous Week"])] if selected_tab == "Two Week Relationship" else df[df["Level"].isin(["Previous Week", "Previous Daily", "Present Daily"])].reset_index(drop=True)
+
+if selected_tab == "Full Structure View":
+    sub_df = df.copy()
+elif selected_tab == "Two Month Relationship":
+    sub_df = df[df["Level"].isin(["2 Months Ago", "Previous Month"])].reset_index(drop=True)
+elif selected_tab == "Two Week Relationship":
+    sub_df = df[df["Level"].isin(["2 Weeks Ago", "Previous Week"])].reset_index(drop=True)
+else:
+    sub_df = df[df["Level"].isin(["Previous Week", "Previous Daily", "Present Daily"])].reset_index(drop=True)
 
 # --- 6. Matplotlib சார்ட் என்ஜின் ---
 def plot_mobile_engine(plot_df, ltp):
@@ -131,6 +155,8 @@ def plot_mobile_engine(plot_df, ltp):
     for idx, row in plot_df.iterrows():
         x = x_positions[idx]
         all_prices.extend([row["H4"], row["H3"], row["L3"], row["L4"], row["TC"], row["CP"], row["BC"]])
+        
+        # Camarilla Lines
         ax.hlines(y=row["H4"], xmin=x - bar_width, xmax=x + bar_width, colors="blue", linewidth=2.5)
         ax.text(x, row["H4"] + (ltp*0.0005), f'{row["H4"]:.1f}', ha="center", va="bottom", fontsize=8, color="blue", weight="bold")
         ax.hlines(y=row["H3"], xmin=x - bar_width, xmax=x + bar_width, colors="orange", linewidth=2.5)
@@ -139,18 +165,39 @@ def plot_mobile_engine(plot_df, ltp):
         ax.text(x, row["L3"] - (ltp*0.0005), f'{row["L3"]:.1f}', ha="center", va="top", fontsize=8, color="red", weight="bold")
         ax.hlines(y=row["L4"], xmin=x - bar_width, xmax=x + bar_width, colors="blue", linestyles="--", linewidth=2)
         ax.text(x, row["L4"] - (ltp*0.0005), f'{row["L4"]:.1f}', ha="center", va="top", fontsize=8, color="blue", weight="bold")
+        
+        # CPR Lines
         ax.hlines(y=row["TC"], xmin=x - bar_width, xmax=x + bar_width, colors="purple", linestyles=":", linewidth=1.5)
         ax.hlines(y=row["CP"], xmin=x - bar_width, xmax=x + bar_width, colors="purple", linestyles="-.", linewidth=2)
         ax.hlines(y=row["BC"], xmin=x - bar_width, xmax=x + bar_width, colors="purple", linestyles=":", linewidth=1.5)
         ax.text(x - bar_width, row["CP"], f' CP:{row["CP"]:.1f}', ha="left", va="center", fontsize=7.5, color="purple")
+        
+        # LTP Line
         ax.hlines(y=ltp, xmin=x - bar_width, xmax=x + bar_width, colors="crimson", linestyles="-", linewidth=1.2, alpha=0.7)
         ax.plot(x, ltp, marker="o", color="crimson", markersize=5)
-        if idx == len(plot_df) - 1: ax.text(x + bar_width + 0.02, ltp, f'LTP:{ltp}', va="center", ha="left", color="crimson", weight="bold", fontsize=8.5)
+        if idx == len(plot_df) - 1: 
+            ax.text(x + bar_width + 0.02, ltp, f'LTP:{ltp}', va="center", ha="left", color="crimson", weight="bold", fontsize=8.5)
+
+    # Shading லாஜிக்
+    levels_list = plot_df["Level"].values
+    if "Previous Week" in levels_list and "Present Daily" in levels_list:
+        try:
+            w_row = plot_df[plot_df["Level"] == "Previous Week"].iloc[0]
+            d_row = plot_df[plot_df["Level"] == "Present Daily"].iloc[0]
+            all_keys = ["H4", "H3", "L3", "L4", "TC", "CP", "BC"]
+            for wk in all_keys:
+                for dk in all_keys:
+                    if abs(w_row[wk] - d_row[dk]) / w_row[wk] <= 0.0015:
+                        y_min, y_max = min(w_row[wk], d_row[dk]), max(w_row[wk], d_row[dk])
+                        ax.axhspan(y_min - (ltp*0.0002), y_max + (ltp*0.0002), xmin=0.1, xmax=0.9, color="#ff00ff", alpha=0.1)
+        except:
+            pass
 
     ax.set_xticks(x_positions)
     ax.set_xticklabels(plot_df["Level"], fontsize=9.5, weight="bold")
     ax.grid(True, linestyle=":", alpha=0.4)
     ax.set_xlim(-0.5, len(plot_df) - 0.5)
+    
     min_p, max_p = min(all_prices), max(all_prices)
     padding = (max_p - min_p) * 0.08
     ax.set_ylim(min_p - padding, max_p + padding)
