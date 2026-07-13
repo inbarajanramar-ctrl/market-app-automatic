@@ -8,9 +8,9 @@ from matplotlib.backends.backend_pdf import PdfPages
 st.set_page_config(page_title="Advanced Multi-Pivot Matrix", layout="centered")
 
 st.title("📊 3-Week & 3-Month Real-Time Matrix Engine")
-st.write("Live Data Screener & Structure Matrix — No Waiting for Weekend/Month-End")
+st.write("Live Data Screener & Structure Matrix — New Multi-Frame Forecast Layout")
 
-# --- Nifty & Sensex பங்குகளின் முழுமையான பட்டியல் ---
+# --- Nifty & Sensex Pangsுகளின் முழுமையான பட்டியல் ---
 NIFTY_AND_SENSEX_STOCKS = {
     "Nifty 50 Index": "^NSEI", "Bank Nifty Index": "^NSEBANK", "Sensex Index": "^BSESN",
     "Reliance Industries": "RELIANCE.NS", "TCS": "TCS.NS", "HDFC Bank": "HDFCBANK.NS", 
@@ -43,7 +43,7 @@ def calculate_pivot_levels(high, low, close):
     l4 = close - (range_val * 1.1 / 2.0)
     return {"H4": round(h4,2), "H3": round(h3,2), "L3": round(l3,2), "L4": round(l4,2), "TC": round(tc,2), "CP": round(cp,2), "BC": round(bc,2)}
 
-# --- 2. வெப்சைட்டில் இருந்து 3 வார மற்றும் 3 மாத தரவுகளை எடுக்கும் இன்ஜின் ---
+# --- 2. வெப்சைட்டில் இருந்து புதிய பெயரிடலில் தரவுகளை எடுக்கும் இன்ஜின் ---
 @st.cache_data(ttl=120)
 def fetch_perfect_ohlc_matrix(ticker_symbol):
     ticker = yf.Ticker(ticker_symbol)
@@ -61,52 +61,52 @@ def fetch_perfect_ohlc_matrix(ticker_symbol):
     matrix_data["Present Daily"] = {"H": df['High'].iloc[-1], "L": df['Low'].iloc[-1], "C": df['Close'].iloc[-1]}
     matrix_data["Previous Daily"] = {"H": df['High'].iloc[-2], "L": df['Low'].iloc[-2], "C": df['Close'].iloc[-2]}
     
-    # B. WEEKLY
+    # B. WEEKLY (புதிய மாற்றுப் பெயர்களுடன்)
     df_weekly = df.resample('W-SUN').agg({'High': 'max', 'Low': 'min', 'Close': 'last'}).dropna()
     if len(df_weekly) >= 3:
-        matrix_data["Present Weekly"] = {"H": df_weekly['High'].iloc[-1], "L": df_weekly['Low'].iloc[-1], "C": df_weekly['Close'].iloc[-1]}
-        matrix_data["Previous Week"] = {"H": df_weekly['High'].iloc[-2], "L": df_weekly['Low'].iloc[-2], "C": df_weekly['Close'].iloc[-2]}
-        matrix_data["2 Weeks Ago"] = {"H": df_weekly['High'].iloc[-3], "L": df_weekly['Low'].iloc[-3], "C": df_weekly['Close'].iloc[-3]}
+        matrix_data["Forecast Week"] = {"H": df_weekly['High'].iloc[-1], "L": df_weekly['Low'].iloc[-1], "C": df_weekly['Close'].iloc[-1]}
+        matrix_data["Current Week"] = {"H": df_weekly['High'].iloc[-2], "L": df_weekly['Low'].iloc[-2], "C": df_weekly['Close'].iloc[-2]}
+        matrix_data["Previous Week"] = {"H": df_weekly['High'].iloc[-3], "L": df_weekly['Low'].iloc[-3], "C": df_weekly['Close'].iloc[-3]}
         
-    # C. MONTHLY
+    # C. MONTHLY (புதிய மாற்றுப் பெயர்களுடன்)
     df_monthly = df.resample('ME').agg({'High': 'max', 'Low': 'min', 'Close': 'last'}).dropna()
     if len(df_monthly) >= 3:
-        matrix_data["Present Monthly"] = {"H": df_monthly['High'].iloc[-1], "L": df_monthly['Low'].iloc[-1], "C": df_monthly['Close'].iloc[-1]}
-        matrix_data["Previous Month"] = {"H": df_monthly['High'].iloc[-2], "L": df_monthly['Low'].iloc[-2], "C": df_monthly['Close'].iloc[-2]}
-        matrix_data["2 Months Ago"] = {"H": df_monthly['High'].iloc[-3], "L": df_monthly['Low'].iloc[-3], "C": df_monthly['Close'].iloc[-3]}
+        matrix_data["Forecast Month"] = {"H": df_monthly['High'].iloc[-1], "L": df_monthly['Low'].iloc[-1], "C": df_monthly['Close'].iloc[-1]}
+        matrix_data["Current Month"] = {"H": df_monthly['High'].iloc[-2], "L": df_monthly['Low'].iloc[-2], "C": df_monthly['Close'].iloc[-2]}
+        matrix_data["Previous Month"] = {"H": df_monthly['High'].iloc[-3], "L": df_monthly['Low'].iloc[-3], "C": df_monthly['Close'].iloc[-3]}
         
     return matrix_data, round(ltp, 2)
 
-# --- Confluence Level Zone கண்டறியும் மேம்படுத்தப்பட்ட லாஜிக் (Previous Month, Previous Week, Present Daily) ---
+# --- Confluence Level Zone கண்டறியும் மேம்படுத்தப்பட்ட லாஜிக் (Current Month, Current Week, Present Daily) ---
 def get_confluence_zones(plot_df):
     confluences = []
-    required_levels = ["Previous Month", "Previous Week", "Present Daily"]
+    required_levels = ["Current Month", "Current Week", "Present Daily"]
     
     # தேவையான மூன்று லெவல்களும் டேட்டாபிரேமில் இருப்பதை உறுதி செய்கிறோம்
     if all(lvl in plot_df["Level"].values for lvl in required_levels):
-        m_row = plot_df[plot_df["Level"] == "Previous Month"].iloc[0]
-        w_row = plot_df[plot_df["Level"] == "Previous Week"].iloc[0]
+        m_row = plot_df[plot_df["Level"] == "Current Month"].iloc[0]
+        w_row = plot_df[plot_df["Level"] == "Current Week"].iloc[0]
         d_row = plot_df[plot_df["Level"] == "Present Daily"].iloc[0]
         
         all_keys = ["H4", "H3", "L3", "L4", "TC", "CP", "BC"]
         
-        # 1. Previous Month vs Previous Week
+        # 1. Current Month vs Current Week
         for mk in all_keys:
             for wk in all_keys:
                 if abs(m_row[mk] - w_row[wk]) / m_row[mk] <= 0.0015:
-                    confluences.append(f"🔥 Confluence: Prev Month {mk} ({m_row[mk]:.1f}) ≈ Prev Week {wk} ({w_row[wk]:.1f})")
+                    confluences.append(f"🔥 Confluence: Current Month {mk} ({m_row[mk]:.1f}) ≈ Current Week {wk} ({w_row[wk]:.1f})")
                     
-        # 2. Previous Week vs Present Daily
+        # 2. Current Week vs Present Daily
         for wk in all_keys:
             for dk in all_keys:
                 if abs(w_row[wk] - d_row[dk]) / w_row[wk] <= 0.0015:
-                    confluences.append(f"🔥 Confluence: Prev Week {wk} ({w_row[wk]:.1f}) ≈ Pres Daily {dk} ({d_row[dk]:.1f})")
+                    confluences.append(f"🔥 Confluence: Current Week {wk} ({w_row[wk]:.1f}) ≈ Pres Daily {dk} ({d_row[dk]:.1f})")
                     
-        # 3. Previous Month vs Present Daily
+        # 3. Current Month vs Present Daily
         for mk in all_keys:
             for dk in all_keys:
                 if abs(m_row[mk] - d_row[dk]) / m_row[mk] <= 0.0015:
-                    confluences.append(f"🔥 Confluence: Prev Month {mk} ({m_row[mk]:.1f}) ≈ Pres Daily {dk} ({d_row[dk]:.1f})")
+                    confluences.append(f"🔥 Confluence: Current Month {mk} ({m_row[mk]:.1f}) ≈ Pres Daily {dk} ({d_row[dk]:.1f})")
                     
     return list(set(confluences))  # டூப்ளிகேட்களை நீக்க
 
@@ -147,8 +147,8 @@ if not web_data:
     st.error("Error loading specific ticker data.")
     st.stop()
 
-# லெவல்களை அடுக்குதல்
-view_order = ["2 Months Ago", "Previous Month", "Present Monthly", "2 Weeks Ago", "Previous Week", "Present Weekly", "Previous Daily", "Present Daily"]
+# லெவல்களை அடுக்குதல் (புதிய பெயரிடல் முறை வரிசைப்படி)
+view_order = ["Previous Month", "Current Month", "Forecast Month", "Previous Week", "Current Week", "Forecast Week", "Previous Daily", "Present Daily"]
 calculated_rows = []
 for tf in view_order:
     vals = web_data.get(tf, {"H": 0, "L": 0, "C": 0})
@@ -171,11 +171,11 @@ def detect_pivot_relationship(prev_tc, prev_bc, curr_tc, curr_bc):
     elif curr_low < prev_low and curr_high <= prev_high: return "🟠 Overlapping Lower (Bearish)"
     else: return "⚪ Unchanged"
 
-m_rel1 = detect_pivot_relationship(row_map.loc["2 Months Ago", "TC"], row_map.loc["2 Months Ago", "BC"], row_map.loc["Previous Month", "TC"], row_map.loc["Previous Month", "BC"])
-m_rel2 = detect_pivot_relationship(row_map.loc["Previous Month", "TC"], row_map.loc["Previous Month", "BC"], row_map.loc["Present Monthly", "TC"], row_map.loc["Present Monthly", "BC"])
+m_rel1 = detect_pivot_relationship(row_map.loc["Previous Month", "TC"], row_map.loc["Previous Month", "BC"], row_map.loc["Current Month", "TC"], row_map.loc["Current Month", "BC"])
+m_rel2 = detect_pivot_relationship(row_map.loc["Current Month", "TC"], row_map.loc["Current Month", "BC"], row_map.loc["Forecast Month", "TC"], row_map.loc["Forecast Month", "BC"])
 
-w_rel1 = detect_pivot_relationship(row_map.loc["2 Weeks Ago", "TC"], row_map.loc["2 Weeks Ago", "BC"], row_map.loc["Previous Week", "TC"], row_map.loc["Previous Week", "BC"])
-w_rel2 = detect_pivot_relationship(row_map.loc["Previous Week", "TC"], row_map.loc["Previous Week", "BC"], row_map.loc["Present Weekly", "TC"], row_map.loc["Present Weekly", "BC"])
+w_rel1 = detect_pivot_relationship(row_map.loc["Previous Week", "TC"], row_map.loc["Previous Week", "BC"], row_map.loc["Current Week", "TC"], row_map.loc["Current Week", "BC"])
+w_rel2 = detect_pivot_relationship(row_map.loc["Current Week", "TC"], row_map.loc["Current Week", "BC"], row_map.loc["Forecast Week", "TC"], row_map.loc["Forecast Week", "BC"])
 
 st.subheader("🔍 3-Tier Multi-Timeframe Analysis")
 st.warning(f"**🦅 3 Months Matrix Trend:** {m_rel1} ➔ Then {m_rel2}")
@@ -186,7 +186,7 @@ st.info(f"**📅 Day-on-Day Trend:** {detect_pivot_relationship(row_map.loc["Pre
 st.subheader("🎯 View Perspective")
 selected_tab = st.radio("Select View Range:", [
     "Full 8-Level View", 
-    "Special Request View (PM, PW, PD)", 
+    "Special Request View (CM, CW, PD)", 
     "3 Month Structural View", 
     "3 Week Structural View", 
     "Tactical Weekly to Daily View"
@@ -194,14 +194,14 @@ selected_tab = st.radio("Select View Range:", [
 
 if selected_tab == "Full 8-Level View":
     sub_df = df.copy()
-elif selected_tab == "Special Request View (PM, PW, PD)":
-    sub_df = df[df["Level"].isin(["Previous Month", "Previous Week", "Present Daily"])].reset_index(drop=True)
+elif selected_tab == "Special Request View (CM, CW, PD)":
+    sub_df = df[df["Level"].isin(["Current Month", "Current Week", "Present Daily"])].reset_index(drop=True)
 elif selected_tab == "3 Month Structural View":
-    sub_df = df[df["Level"].isin(["2 Months Ago", "Previous Month", "Present Monthly"])].reset_index(drop=True)
+    sub_df = df[df["Level"].isin(["Previous Month", "Current Month", "Forecast Month"])].reset_index(drop=True)
 elif selected_tab == "3 Week Structural View":
-    sub_df = df[df["Level"].isin(["2 Weeks Ago", "Previous Week", "Present Weekly"])].reset_index(drop=True)
+    sub_df = df[df["Level"].isin(["Previous Week", "Current Week", "Forecast Week"])].reset_index(drop=True)
 else:
-    sub_df = df[df["Level"].isin(["Present Weekly", "Previous Daily", "Present Daily"])].reset_index(drop=True)
+    sub_df = df[df["Level"].isin(["Forecast Week", "Previous Daily", "Present Daily"])].reset_index(drop=True)
 
 # --- 7. Matplotlib சார்ட் என்ஜின் (மேம்படுத்தப்பட்ட கன்ஃப்ளூயன்ஸ் ஷேடிங்குடன்) ---
 def plot_mobile_engine(plot_df, ltp):
@@ -236,18 +236,18 @@ def plot_mobile_engine(plot_df, ltp):
         if idx == len(plot_df) - 1: 
             ax.text(x + bar_width + 0.02, ltp, f'LTP:{ltp}', va="center", ha="left", color="crimson", weight="bold", fontsize=8.5)
 
-    # PM, PW, PD மேட்ரிக்ஸ் லெவல் கன்ஃப்ளூயன்ஸ் ஷேடிங்
+    # CM, CW, PD மேட்ரிக்ஸ் லெவல் கன்ஃப்ளூயன்ஸ் ஷேடிங்
     levels_in_plot = plot_df["Level"].values
-    if "Previous Month" in levels_in_plot and "Previous Week" in levels_in_plot and "Present Daily" in levels_in_plot:
-        m_row = plot_df[plot_df["Level"] == "Previous Month"].iloc[0]
-        w_row = plot_df[plot_df["Level"] == "Previous Week"].iloc[0]
+    if "Current Month" in levels_in_plot and "Current Week" in levels_in_plot and "Present Daily" in levels_in_plot:
+        m_row = plot_df[plot_df["Level"] == "Current Month"].iloc[0]
+        w_row = plot_df[plot_df["Level"] == "Current Week"].iloc[0]
         d_row = plot_df[plot_df["Level"] == "Present Daily"].iloc[0]
         all_keys = ["H4", "H3", "L3", "L4", "TC", "CP", "BC"]
         
         for mk in all_keys:
             for wk in all_keys:
                 for dk in all_keys:
-                    # PM vs PW vs PD Confluence Zone Highlight
+                    # CM vs CW vs PD Confluence Zone Highlight
                     if abs(m_row[mk] - w_row[wk]) / m_row[mk] <= 0.0015 and abs(w_row[wk] - d_row[dk]) / w_row[wk] <= 0.0015:
                         y_min = min(m_row[mk], w_row[wk], d_row[dk])
                         y_max = max(m_row[mk], w_row[wk], d_row[dk])
@@ -270,13 +270,13 @@ st.pyplot(plot_mobile_engine(sub_df, market_close_price))
 st.subheader("📋 Active Data Table")
 st.dataframe(df.set_index("Level"), use_container_width=True)
 
-st.subheader("🎯 Detected Confluence Zones (PM ➔ PW ➔ PD)")
+st.subheader("🎯 Detected Confluence Zones (CM ➔ CW ➔ PD)")
 active_confluences = get_confluence_zones(df)
 if active_confluences:
     for conf in active_confluences:
         st.write(conf)
 else:
-    st.write("No strong confluences detected between Previous Month, Previous Week & Present Daily within 0.15% threshold.")
+    st.write("No strong confluences detected between Current Month, Current Week & Present Daily within 0.15% threshold.")
 
 # --- 9. மேம்படுத்தப்பட்ட PDF ஜெனரேட்டர் ---
 st.subheader("📥 Download Analysis Report")
@@ -301,35 +301,35 @@ with PdfPages(pdf_path) as pdf:
         cell.set_fontsize(7)
     table.scale(1.0, 1.8)
     
-    pdf_conf_text = "🎯 Detected Confluence Levels (PM ➔ PW ➔ PD):\n" + ("\n".join(active_confluences) if active_confluences else "No confluences found.")
+    pdf_conf_text = "🎯 Detected Confluence Levels (CM ➔ CW ➔ PD):\n" + ("\n".join(active_confluences) if active_confluences else "No confluences found.")
     plt.figtext(0.1, 0.04, pdf_conf_text, fontsize=8.5, color="purple", weight="bold")
     plt.title("Active Data Table (Transposed Matrix Layout)", fontsize=11, weight="bold", pad=12)
     pdf.savefig(fig2)
     plt.close()
     
-    # --- PAGE 3: Special Request View (Previous Month, Previous Week, Present Daily) ---
-    sp_df = df[df["Level"].isin(["Previous Month", "Previous Week", "Present Daily"])].reset_index(drop=True)
+    # --- PAGE 3: Special Request View (Current Month, Current Week, Present Daily) ---
+    sp_df = df[df["Level"].isin(["Current Month", "Current Week", "Present Daily"])].reset_index(drop=True)
     fig3 = plot_mobile_engine(sp_df, market_close_price)
-    plt.title("Market Analysis - Special Structural View (PM, PW, PD)", fontsize=11, weight="bold", pad=12)
+    plt.title("Market Analysis - Special Structural View (CM, CW, PD)", fontsize=11, weight="bold", pad=12)
     pdf.savefig(fig3)
     plt.close()
     
     # --- PAGE 4: 3 Month Structural View ---
-    m_df = df[df["Level"].isin(["2 Months Ago", "Previous Month", "Present Monthly"])].reset_index(drop=True)
+    m_df = df[df["Level"].isin(["Previous Month", "Current Month", "Forecast Month"])].reset_index(drop=True)
     fig4 = plot_mobile_engine(m_df, market_close_price)
     plt.title("Market Analysis - 3 Month Structural View", fontsize=11, weight="bold", pad=12)
     pdf.savefig(fig4)
     plt.close()
     
     # --- PAGE 5: 3 Week Structural View ---
-    w_df = df[df["Level"].isin(["2 Weeks Ago", "Previous Week", "Present Weekly"])].reset_index(drop=True)
+    w_df = df[df["Level"].isin(["Previous Week", "Current Week", "Forecast Week"])].reset_index(drop=True)
     fig5 = plot_mobile_engine(w_df, market_close_price)
     plt.title("Market Analysis - 3 Week Structural View", fontsize=11, weight="bold", pad=12)
     pdf.savefig(fig5)
     plt.close()
     
     # --- PAGE 6: Tactical Weekly to Daily View ---
-    d_df = df[df["Level"].isin(["Present Weekly", "Previous Daily", "Present Daily"])].reset_index(drop=True)
+    d_df = df[df["Level"].isin(["Forecast Week", "Previous Daily", "Present Daily"])].reset_index(drop=True)
     fig6 = plot_mobile_engine(d_df, market_close_price)
     plt.title("Market Analysis - Tactical Weekly to Daily View", fontsize=11, weight="bold", pad=12)
     pdf.savefig(fig6)
