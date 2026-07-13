@@ -297,7 +297,8 @@ with PdfPages(pdf_path) as pdf:
     
     table = ax2.table(cellText=df_transposed.values, colLabels=df_transposed.columns, loc='center', cellLoc='center')
     table.auto_set_font_size(False)
-    table.set_font_size(7)
+    for cell in table.get_celld().values():
+        cell.set_fontsize(7)
     table.scale(1.0, 1.8)
     
     pdf_conf_text = "🎯 Detected Confluence Levels (PM ➔ PW ➔ PD):\n" + ("\n".join(active_confluences) if active_confluences else "No confluences found.")
