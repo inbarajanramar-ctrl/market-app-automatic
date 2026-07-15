@@ -57,19 +57,15 @@ def fetch_perfect_ohlc_matrix(ticker_symbol):
     
     matrix_data = {}
     
-    # A. DAILY (திருத்தப்பட்ட பகுதி - Pre-Market & Live Multi-Fix)
-    import datetime
-    last_row_date = df.index[-1].date()
-    today_date = datetime.date.today()
-
-    if last_row_date == today_date:
-        # மார்க்கெட் லைவ் அல்லது இன்று முடிந்துவிட்ட நேரம் (Last row is Today's data)
-        matrix_data["Present Daily"] = {"H": df['High'].iloc[-1], "L": df['Low'].iloc[-1], "C": df['Close'].iloc[-1]}
-        matrix_data["Previous Daily"] = {"H": df['High'].iloc[-2], "L": df['Low'].iloc[-2], "C": df['Close'].iloc[-2]}
-    else:
-        # மார்க்கெட் இன்னும் தொடங்காத pre-market நேரம் (Last row is actually Yesterday's data)
-        matrix_data["Present Daily"] = {"H": df['High'].iloc[-1], "L": df['Low'].iloc[-1], "C": df['Close'].iloc[-1]}
-        matrix_data["Previous Daily"] = {"H": df['High'].iloc[-1], "L": df['Low'].iloc[-1], "C": df['Close'].iloc[-1]}
+    # A. DAILY (அல்கோ மேட்ரிக்ஸ் லாஜிக் படி துல்லியமான மேப்பிங்)
+    
+    # df.iloc[-1] என்பது இன்றைய முடிந்த நாளின் அசல் OHLC தரவு. 
+    # இதைக் கொண்டு கணக்கிடப்படும் லெவல்கள் நாளைக்கானது (Forecasting Daily -> Present Daily லேபிள்)
+    matrix_data["Present Daily"] = {"H": df['High'].iloc[-1], "L": df['Low'].iloc[-1], "C": df['Close'].iloc[-1]}
+    
+    # df.iloc[-2] என்பது நேற்றைய முடிந்த நாளின் அசல் OHLC தரவு.
+    # இதைக் கொண்டு கணக்கிடப்படும் லெவல்கள் இன்றைய வர்த்தகத்திற்கானவை (Present Daily -> Previous Daily லேபிள்)
+    matrix_data["Previous Daily"] = {"H": df['High'].iloc[-2], "L": df['Low'].iloc[-2], "C": df['Close'].iloc[-2]}
     
     # B. WEEKLY (புதிய மாற்றுப் பெயர்களுடன்)
     df_weekly = df.resample('W-SUN').agg({'High': 'max', 'Low': 'min', 'Close': 'last'}).dropna()
