@@ -57,18 +57,18 @@ def fetch_perfect_ohlc_matrix(ticker_symbol):
     
     matrix_data = {}
     
-    # A. DAILY (அல்கோ மேட்ரிக்ஸ் லாஜிக் படி துல்லியமான மேப்பிங்)
+    # A. DAILY
     matrix_data["Present Daily"] = {"H": df['High'].iloc[-1], "L": df['Low'].iloc[-1], "C": df['Close'].iloc[-1]}
     matrix_data["Previous Daily"] = {"H": df['High'].iloc[-2], "L": df['Low'].iloc[-2], "C": df['Close'].iloc[-2]}
     
-    # B. WEEKLY (புதிய மாற்றுப் பெயர்களுடன்)
+    # B. WEEKLY
     df_weekly = df.resample('W-SUN').agg({'High': 'max', 'Low': 'min', 'Close': 'last'}).dropna()
     if len(df_weekly) >= 3:
         matrix_data["Forecast Week"] = {"H": df_weekly['High'].iloc[-1], "L": df_weekly['Low'].iloc[-1], "C": df_weekly['Close'].iloc[-1]}
         matrix_data["Current Week"] = {"H": df_weekly['High'].iloc[-2], "L": df_weekly['Low'].iloc[-2], "C": df_weekly['Close'].iloc[-2]}
         matrix_data["Previous Week"] = {"H": df_weekly['High'].iloc[-3], "L": df_weekly['Low'].iloc[-3], "C": df_weekly['Close'].iloc[-3]}
         
-    # C. MONTHLY (புதிய மாற்றுப் பெயர்களுடன்)
+    # C. MONTHLY
     df_monthly = df.resample('ME').agg({'High': 'max', 'Low': 'min', 'Close': 'last'}).dropna()
     if len(df_monthly) >= 3:
         matrix_data["Forecast Month"] = {"H": df_monthly['High'].iloc[-1], "L": df_monthly['Low'].iloc[-1], "C": df_monthly['Close'].iloc[-1]}
@@ -77,38 +77,52 @@ def fetch_perfect_ohlc_matrix(ticker_symbol):
         
     return matrix_data, round(ltp, 2)
 
-# --- Confluence Level Zone கண்டறியும் மேம்படுத்தப்பட்ட லாஜிக் (Current Month, Current Week, Present Daily) ---
+# --- Confluence Level Zone (Support: L3, CP | Resistance: H3, CP) ---
 def get_confluence_zones(plot_df):
     confluences = []
     required_levels = ["Current Month", "Current Week", "Present Daily"]
     
-    # தேவையான மூன்று லெவல்களும் டேட்டாபிரேமில் இருப்பதை உறுதி செய்கிறோம்
     if all(lvl in plot_df["Level"].values for lvl in required_levels):
         m_row = plot_df[plot_df["Level"] == "Current Month"].iloc[0]
         w_row = plot_df[plot_df["Level"] == "Current Week"].iloc[0]
         d_row = plot_df[plot_df["Level"] == "Present Daily"].iloc[0]
         
-        all_keys = ["H4", "H3", "L3", "L4", "TC", "CP", "BC"]
+        support_keys = ["L3", "CP"]
+        resistance_keys = ["H3", "CP"]
         
-        # 1. Current Month vs Current Week
-        for mk in all_keys:
-            for wk in all_keys:
+        # --- SUPPORT CONFLUENCE (L3 & CP) ---
+        for mk in support_keys:
+            for wk in support_keys:
                 if abs(m_row[mk] - w_row[wk]) / m_row[mk] <= 0.0010:
-                    confluences.append(f"🔥 Confluence: Current Month {mk} ({m_row[mk]:.1f}) ≈ Current Week {wk} ({w_row[wk]:.1f})")
+                    confluences.append(f"🟢 Support Confluence: Current Month {mk} ({m_row[mk]:.1f}) ≈ Current Week {wk} ({w_row[wk]:.1f})")
                     
-        # 2. Current Week vs Present Daily
-        for wk in all_keys:
-            for dk in all_keys:
-                if abs(w_row[wk] - d_row[dk]) / w_row[wk] <= 0.0015:
-                    confluences.append(f"🔥 Confluence: Current Week {wk} ({w_row[wk]:.1f}) ≈ Pres Daily {dk} ({d_row[dk]:.1f})")
+        for wk in support_keys:
+            for dk in support_keys:
+                if abs(w_row[wk] - d_row[dk]) / w_row[wk] <= 0.0010:
+                    confluences.append(f"🟢 Support Confluence: Current Week {wk} ({w_row[wk]:.1f}) ≈ Pres Daily {dk} ({d_row[dk]:.1f})")
                     
-        # 3. Current Month vs Present Daily
-        for mk in all_keys:
-            for dk in all_keys:
-                if abs(m_row[mk] - d_row[dk]) / m_row[mk] <= 0.0015:
-                    confluences.append(f"🔥 Confluence: Current Month {mk} ({m_row[mk]:.1f}) ≈ Pres Daily {dk} ({d_row[dk]:.1f})")
+        for mk in support_keys:
+            for dk in support_keys:
+                if abs(m_row[mk] - d_row[dk]) / m_row[mk] <= 0.0010:
+                    confluences.append(f"🟢 Support Confluence: Current Month {mk} ({m_row[mk]:.1f}) ≈ Pres Daily {dk} ({d_row[dk]:.1f})")
+
+        # --- RESISTANCE CONFLUENCE (H3 & CP) ---
+        for mk in resistance_keys:
+            for wk in resistance_keys:
+                if abs(m_row[mk] - w_row[wk]) / m_row[mk] <= 0.0010:
+                    confluences.append(f"🔴 Resistance Confluence: Current Month {mk} ({m_row[mk]:.1f}) ≈ Current Week {wk} ({w_row[wk]:.1f})")
                     
-    return list(set(confluences))  # டூப்ளிகேட்களை நீக்க
+        for wk in resistance_keys:
+            for dk in resistance_keys:
+                if abs(w_row[wk] - d_row[dk]) / w_row[wk] <= 0.0010:
+                    confluences.append(f"🔴 Resistance Confluence: Current Week {wk} ({w_row[wk]:.1f}) ≈ Pres Daily {dk} ({d_row[dk]:.1f})")
+                    
+        for mk in resistance_keys:
+            for dk in resistance_keys:
+                if abs(m_row[mk] - d_row[dk]) / m_row[mk] <= 0.0010:
+                    confluences.append(f"🔴 Resistance Confluence: Current Month {mk} ({m_row[mk]:.1f}) ≈ Pres Daily {dk} ({d_row[dk]:.1f})")
+                    
+    return list(set(confluences))
 
 # --- 3. தானியங்கி பிரேக்அவுட் ஸ்கேனர் பட்டன் ---
 st.subheader("🎯 1-Click Breakout Radar (ALL Nifty & Sensex Stocks)")
@@ -147,7 +161,7 @@ if not web_data:
     st.error("Error loading specific ticker data.")
     st.stop()
 
-# லெவல்களை அடுக்குதல் (புதிய பெயரிடல் முறை வரிசைப்படி)
+# லெவல்களை அடுக்குதல்
 view_order = ["Previous Month", "Current Month", "Forecast Month", "Previous Week", "Current Week", "Forecast Week", "Previous Daily", "Present Daily"]
 calculated_rows = []
 for tf in view_order:
@@ -203,7 +217,7 @@ elif selected_tab == "3 Week Structural View":
 else:
     sub_df = df[df["Level"].isin(["Forecast Week", "Previous Daily", "Present Daily"])].reset_index(drop=True)
 
-# --- 7. Matplotlib சார்ட் என்ஜின் (மேம்படுத்தப்பட்ட கன்ஃப்ளூயன்ஸ் ஷேடிங்குடன்) ---
+# --- 7. Matplotlib சார்ட் என்ஜின் ---
 def plot_mobile_engine(plot_df, ltp):
     fig, ax = plt.subplots(figsize=(11, 6.5))
     x_positions = range(len(plot_df))
@@ -236,22 +250,33 @@ def plot_mobile_engine(plot_df, ltp):
         if idx == len(plot_df) - 1: 
             ax.text(x + bar_width + 0.02, ltp, f'LTP:{ltp}', va="center", ha="left", color="crimson", weight="bold", fontsize=8.5)
 
-    # CM, CW, PD மேட்ரிக்ஸ் லெவல் கன்ஃப்ளூயன்ஸ் ஷேடிங்
+    # CM, CW, PD Target Confluence Shading (Support: Green | Resistance: Red)
     levels_in_plot = plot_df["Level"].values
     if "Current Month" in levels_in_plot and "Current Week" in levels_in_plot and "Present Daily" in levels_in_plot:
         m_row = plot_df[plot_df["Level"] == "Current Month"].iloc[0]
         w_row = plot_df[plot_df["Level"] == "Current Week"].iloc[0]
         d_row = plot_df[plot_df["Level"] == "Present Daily"].iloc[0]
-        all_keys = ["H4", "H3", "L3", "L4", "TC", "CP", "BC"]
         
-        for mk in all_keys:
-            for wk in all_keys:
-                for dk in all_keys:
-                    # CM vs CW vs PD Confluence Zone Highlight
+        support_keys = ["L3", "CP"]
+        resistance_keys = ["H3", "CP"]
+        
+        # Support Shading (Green)
+        for mk in support_keys:
+            for wk in support_keys:
+                for dk in support_keys:
                     if abs(m_row[mk] - w_row[wk]) / m_row[mk] <= 0.0010 and abs(w_row[wk] - d_row[dk]) / w_row[wk] <= 0.0010:
                         y_min = min(m_row[mk], w_row[wk], d_row[dk])
                         y_max = max(m_row[mk], w_row[wk], d_row[dk])
-                        ax.axhspan(y_min - (ltp*0.0002), y_max + (ltp*0.0002), color="#ff00ff", alpha=0.2)
+                        ax.axhspan(y_min - (ltp*0.0002), y_max + (ltp*0.0002), color="#00ff00", alpha=0.2)
+
+        # Resistance Shading (Red)
+        for mk in resistance_keys:
+            for wk in resistance_keys:
+                for dk in resistance_keys:
+                    if abs(m_row[mk] - w_row[wk]) / m_row[mk] <= 0.0010 and abs(w_row[wk] - d_row[dk]) / w_row[wk] <= 0.0010:
+                        y_min = min(m_row[mk], w_row[wk], d_row[dk])
+                        y_max = max(m_row[mk], w_row[wk], d_row[dk])
+                        ax.axhspan(y_min - (ltp*0.0002), y_max + (ltp*0.0002), color="#ff0000", alpha=0.2)
 
     ax.set_xticks(x_positions)
     ax.set_xticklabels(plot_df["Level"], fontsize=8.5, weight="bold", rotation=15)
@@ -270,13 +295,13 @@ st.pyplot(plot_mobile_engine(sub_df, market_close_price))
 st.subheader("📋 Active Data Table")
 st.dataframe(df.set_index("Level"), use_container_width=True)
 
-st.subheader("🎯 Detected Confluence Zones (CM ➔ CW ➔ PD)")
+st.subheader("🎯 Targeted Support (L3, CP) & Resistance (H3, CP) Confluence Zones")
 active_confluences = get_confluence_zones(df)
 if active_confluences:
     for conf in active_confluences:
         st.write(conf)
 else:
-    st.write("No strong confluences detected between Current Month, Current Week & Present Daily within 0.10% threshold.")
+    st.write("No strong confluences detected for Support (L3, CP) or Resistance (H3, CP) within 0.1% threshold.")
 
 # --- 9. மேம்படுத்தப்பட்ட PDF ஜெனரேட்டர் ---
 st.subheader("📥 Download Analysis Report")
@@ -288,7 +313,7 @@ with PdfPages(pdf_path) as pdf:
     pdf.savefig(fig1)
     plt.close()
     
-    # --- PAGE 2: Transposed Active Data Table ONLY ---
+    # --- PAGE 2: Transposed Active Data Table Only ---
     fig2, ax2 = plt.subplots(figsize=(11, 6.5))
     ax2.axis('off')
     
@@ -305,16 +330,16 @@ with PdfPages(pdf_path) as pdf:
     pdf.savefig(fig2)
     plt.close()
 
-    # --- PAGE 3: Detected Confluence Zones ONLY ---
+    # --- PAGE 3: Detected Confluence Zones Page ---
     fig_conf, ax_conf = plt.subplots(figsize=(11, 6.5))
     ax_conf.axis('off')
-    pdf_conf_text = "🎯 Detected Confluence Levels (CM ➔ CW ➔ PD):\n\n" + ("\n\n".join(active_confluences) if active_confluences else "No confluences found.")
+    pdf_conf_text = "🎯 Support (L3, CP) & Resistance (H3, CP) Confluences:\n\n" + ("\n\n".join(active_confluences) if active_confluences else "No confluences found within 0.1% threshold.")
     plt.figtext(0.1, 0.5, pdf_conf_text, fontsize=9.5, color="purple", weight="bold", va="center")
     plt.title("Detected Confluence Zones", fontsize=11, weight="bold", pad=12)
     pdf.savefig(fig_conf)
     plt.close()
     
-    # --- PAGE 4: Special Request View (Current Month, Current Week, Present Daily) ---
+    # --- PAGE 4: Special Request View ---
     sp_df = df[df["Level"].isin(["Current Month", "Current Week", "Present Daily"])].reset_index(drop=True)
     fig3 = plot_mobile_engine(sp_df, market_close_price)
     plt.title("Market Analysis - Special Structural View (CM, CW, PD)", fontsize=11, weight="bold", pad=12)
