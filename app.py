@@ -180,7 +180,7 @@ w_rel2 = detect_pivot_relationship(row_map.loc["Current Week", "TC"], row_map.lo
 st.subheader("🔍 3-Tier Multi-Timeframe Analysis")
 st.warning(f"**🦅 3 Months Matrix Trend:** {m_rel1} ➔ Then {m_rel2}")
 st.success(f"**⏳ 3 Weeks Matrix Trend:** {w_rel1} ➔ Then {w_rel2}")
-st.info(f"**📅 Day-on-Day Trend:** {detect_pivot_relationship(row_map.loc["Previous Daily", "TC"], row_map.loc["Previous Daily", "BC"], row_map.loc["Present Daily", "TC"], row_map.loc["Present Daily", "BC"])}")
+st.info(f"**📅 Day-on-Day Trend:** {detect_pivot_relationship(row_map.loc['Previous Daily', 'TC'], row_map.loc['Previous Daily', 'BC'], row_map.loc['Present Daily', 'TC'], row_map.loc['Present Daily', 'BC'])}")
 
 # --- 6. 5 விதமான மாஸ் சார்ட் வியூ பட்டன்கள் ---
 st.subheader("🎯 View Perspective")
@@ -288,7 +288,7 @@ with PdfPages(pdf_path) as pdf:
     pdf.savefig(fig1)
     plt.close()
     
-    # --- PAGE 2: Transposed Active Data Table & Confluences ---
+    # --- PAGE 2: Transposed Active Data Table ONLY ---
     fig2, ax2 = plt.subplots(figsize=(11, 6.5))
     ax2.axis('off')
     
@@ -301,34 +301,41 @@ with PdfPages(pdf_path) as pdf:
         cell.set_fontsize(7)
     table.scale(1.0, 1.8)
     
-    pdf_conf_text = "🎯 Detected Confluence Levels (CM ➔ CW ➔ PD):\n" + ("\n".join(active_confluences) if active_confluences else "No confluences found.")
-    plt.figtext(0.1, 0.04, pdf_conf_text, fontsize=8.5, color="purple", weight="bold")
     plt.title("Active Data Table (Transposed Matrix Layout)", fontsize=11, weight="bold", pad=12)
     pdf.savefig(fig2)
     plt.close()
+
+    # --- PAGE 3: Detected Confluence Zones ONLY ---
+    fig_conf, ax_conf = plt.subplots(figsize=(11, 6.5))
+    ax_conf.axis('off')
+    pdf_conf_text = "🎯 Detected Confluence Levels (CM ➔ CW ➔ PD):\n\n" + ("\n\n".join(active_confluences) if active_confluences else "No confluences found.")
+    plt.figtext(0.1, 0.5, pdf_conf_text, fontsize=9.5, color="purple", weight="bold", va="center")
+    plt.title("Detected Confluence Zones", fontsize=11, weight="bold", pad=12)
+    pdf.savefig(fig_conf)
+    plt.close()
     
-    # --- PAGE 3: Special Request View (Current Month, Current Week, Present Daily) ---
+    # --- PAGE 4: Special Request View (Current Month, Current Week, Present Daily) ---
     sp_df = df[df["Level"].isin(["Current Month", "Current Week", "Present Daily"])].reset_index(drop=True)
     fig3 = plot_mobile_engine(sp_df, market_close_price)
     plt.title("Market Analysis - Special Structural View (CM, CW, PD)", fontsize=11, weight="bold", pad=12)
     pdf.savefig(fig3)
     plt.close()
     
-    # --- PAGE 4: 3 Month Structural View ---
+    # --- PAGE 5: 3 Month Structural View ---
     m_df = df[df["Level"].isin(["Previous Month", "Current Month", "Forecast Month"])].reset_index(drop=True)
     fig4 = plot_mobile_engine(m_df, market_close_price)
     plt.title("Market Analysis - 3 Month Structural View", fontsize=11, weight="bold", pad=12)
     pdf.savefig(fig4)
     plt.close()
     
-    # --- PAGE 5: 3 Week Structural View ---
+    # --- PAGE 6: 3 Week Structural View ---
     w_df = df[df["Level"].isin(["Previous Week", "Current Week", "Forecast Week"])].reset_index(drop=True)
     fig5 = plot_mobile_engine(w_df, market_close_price)
     plt.title("Market Analysis - 3 Week Structural View", fontsize=11, weight="bold", pad=12)
     pdf.savefig(fig5)
     plt.close()
     
-    # --- PAGE 6: Tactical Weekly to Daily View ---
+    # --- PAGE 7: Tactical Weekly to Daily View ---
     d_df = df[df["Level"].isin(["Forecast Week", "Previous Daily", "Present Daily"])].reset_index(drop=True)
     fig6 = plot_mobile_engine(d_df, market_close_price)
     plt.title("Market Analysis - Tactical Weekly to Daily View", fontsize=11, weight="bold", pad=12)
