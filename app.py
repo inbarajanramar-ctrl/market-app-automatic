@@ -93,7 +93,7 @@ def get_confluence_zones(plot_df):
         # 1. Current Month vs Current Week
         for mk in all_keys:
             for wk in all_keys:
-                if abs(m_row[mk] - w_row[wk]) / m_row[mk] <= 0.0015:
+                if abs(m_row[mk] - w_row[wk]) / m_row[mk] <= 0.0010:
                     confluences.append(f"🔥 Confluence: Current Month {mk} ({m_row[mk]:.1f}) ≈ Current Week {wk} ({w_row[wk]:.1f})")
                     
         # 2. Current Week vs Present Daily
@@ -248,7 +248,7 @@ def plot_mobile_engine(plot_df, ltp):
             for wk in all_keys:
                 for dk in all_keys:
                     # CM vs CW vs PD Confluence Zone Highlight
-                    if abs(m_row[mk] - w_row[wk]) / m_row[mk] <= 0.0015 and abs(w_row[wk] - d_row[dk]) / w_row[wk] <= 0.0015:
+                    if abs(m_row[mk] - w_row[wk]) / m_row[mk] <= 0.0010 and abs(w_row[wk] - d_row[dk]) / w_row[wk] <= 0.0010:
                         y_min = min(m_row[mk], w_row[wk], d_row[dk])
                         y_max = max(m_row[mk], w_row[wk], d_row[dk])
                         ax.axhspan(y_min - (ltp*0.0002), y_max + (ltp*0.0002), color="#ff00ff", alpha=0.2)
@@ -276,7 +276,7 @@ if active_confluences:
     for conf in active_confluences:
         st.write(conf)
 else:
-    st.write("No strong confluences detected between Current Month, Current Week & Present Daily within 0.15% threshold.")
+    st.write("No strong confluences detected between Current Month, Current Week & Present Daily within 0.10% threshold.")
 
 # --- 9. மேம்படுத்தப்பட்ட PDF ஜெனரேட்டர் ---
 st.subheader("📥 Download Analysis Report")
