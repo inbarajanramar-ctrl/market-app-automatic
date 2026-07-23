@@ -10,7 +10,7 @@ st.set_page_config(page_title="Advanced Multi-Pivot Matrix", layout="centered")
 st.title("📊 3-Week & 3-Month Real-Time Matrix Engine")
 st.write("Live Data Screener & Structure Matrix — New Multi-Frame Forecast Layout")
 
-# --- Nifty & Sensex Pangsுகளின் முழுமையான பட்டியல் ---
+# --- Nifty & Sensex பங்குகளின் முழுமையான பட்டியல் ---
 NIFTY_AND_SENSEX_STOCKS = {
     "Nifty 50 Index": "^NSEI", "Bank Nifty Index": "^NSEBANK", "Sensex Index": "^BSESN",
     "Reliance Industries": "RELIANCE.NS", "TCS": "TCS.NS", "HDFC Bank": "HDFCBANK.NS", 
@@ -124,6 +124,23 @@ def get_confluence_zones(plot_df):
                     
     return list(set(confluences))
 
+# --- 🔔 AUTOMATED NIFTY 50 CPR ALERT (<= 0.005%) ---
+nifty_data, nifty_ltp = fetch_perfect_ohlc_matrix("^NSEI")
+if nifty_data and "Present Daily" in nifty_data:
+    p_vals = nifty_data["Present Daily"]
+    p_pivots = calculate_pivot_levels(p_vals["H"], p_vals["L"], p_vals["C"])
+    nifty_cpr_width = (abs(p_pivots["TC"] - p_pivots["BC"]) / nifty_ltp) * 100
+
+    if nifty_cpr_width <= 0.005:
+        st.error(
+            f"🚨 **NIFTY 50 NARROW CPR ALERT:** The Nifty Index CPR width is **{nifty_cpr_width:.4f}%** "
+            f"(<= 0.005%). High probability of a sharp, trending breakout move!"
+        )
+    elif nifty_cpr_width <= 0.05:
+        st.warning(
+            f"⚠️ **NIFTY NARROW CPR:** Nifty 50 Index CPR width is currently **{nifty_cpr_width:.3f}%**."
+        )
+
 # --- 3. தானியங்கி பிரேக்அவுட் ஸ்கேனர் பட்டன் ---
 st.subheader("🎯 1-Click Breakout Radar (ALL Nifty & Sensex Stocks)")
 if st.button("🔍 Scan All Stocks for Breakout"):
@@ -138,7 +155,7 @@ if st.button("🔍 Scan All Stocks for Breakout"):
             width_pct = (abs(pivots["TC"] - pivots["BC"]) / ltp) * 100
             
             if width_pct <= 0.16:
-                narrow_list.append({"Stock": name, "Ticker": ticker, "LTP": ltp, "CPR Width %": round(width_pct, 2)})
+                narrow_list.append({"Stock": name, "Ticker": ticker, "LTP": ltp, "CPR Width %": round(width_pct, 4)})
         progress_bar.progress((idx + 1) / len(NIFTY_AND_SENSEX_STOCKS))
         
     if narrow_list:
